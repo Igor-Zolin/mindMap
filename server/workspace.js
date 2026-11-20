@@ -35,6 +35,10 @@ export const tools = {
     description: 'Change a node title, notes or color. Renaming root also renames the map.',
     input: z.object({ ...mutable, ...nodeId, ...patch })
   },
+  set_node_colors: {
+    description: 'Set one palette color for all specified nodes atomically. Only the specified nodes change, including root when selected.',
+    input: z.object({ ...mutable, nodeIds: z.array(id).min(1).max(160), color })
+  },
   move_node: {
     description: 'Move a branch and its descendants. Use position for an offset from the parent in free layout. Keep parentId to move without reparenting. Set side when moving under root.',
     input: z.object({ ...mutable, ...nodeId, parentId: id, side, position })

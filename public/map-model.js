@@ -203,6 +203,15 @@ export class MapWorkspace {
   }
 
   #edit(map, action, args) {
+    if (action === 'set_node_colors') {
+      if (!Array.isArray(args.nodeIds) || !args.nodeIds.length || args.nodeIds.length > 160 || !nodeColors.includes(args.color)) {
+        throw new AppError('Укажите узлы и цвет палитры');
+      }
+      const nodes = args.nodeIds.map(id => findNode(map, id));
+      for (const node of nodes) node.color = args.color;
+      return;
+    }
+
     if (action === 'restore_map') {
       const state = mapCreationFromExport(args);
       map.nodes = treeNodes(state);

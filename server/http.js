@@ -55,7 +55,7 @@ async function readJson(request) {
 
 export function createService(workspace) {
   const mcp = createMcp(workspace);
-  const nodeActions = new Set(['add_node', 'update_node', 'move_node', 'delete_node', 'delete_map', 'set_layout', 'restore_map']);
+  const nodeActions = new Set(['add_node', 'update_node', 'set_node_colors', 'move_node', 'delete_node', 'delete_map', 'set_layout', 'restore_map']);
   return async (request, userId) => {
     const { pathname } = new URL(request.url);
     try {

@@ -232,8 +232,8 @@ function nodeColorPalette(initialColor, editable, onChange) {
     swatch.disabled = !editable;
     setColor(swatch, id);
     swatch.onclick = () => {
+      if (onChange(id) === false) return;
       markSelection(id);
-      onChange(id);
     };
     swatches.set(id, swatch);
     container.append(swatch);
@@ -295,6 +295,15 @@ function renderInspector() {
     remove.disabled = !map || !branches.length;
     actions.append(collapse, collapseChildren, expandChildren, remove);
     body.append(actions, element('p', 'inspector-empty', 'Выбрано ' + labelCount(selection.length)));
+    const selectedNodes = displayed.nodes.filter(item => selection.includes(item.id));
+    const commonColor = selectedNodes.every(item => item.color === node.color) ? node.color : undefined;
+    body.append(nodeColorPalette(commonColor, Boolean(map), color => {
+      if (busy || commonColor === color) return false;
+      const mapId = map.id;
+      mutate('set_node_colors', { nodeIds: [...selection], color }, map.revision).then(saved => {
+        if (!saved && map?.id === mapId) renderInspector();
+      });
+    }));
     return;
   }
   if (!node) {

@@ -1,0 +1,9 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "mind-map-studio",
+  "main": "server/cloudflare.js",
+  "compatibility_date": "2026-10-24",
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/mcp", "/api/*"] },
+  "durable_objects": { "bindings": [{ "name": "WORKSPACES", "class_name": "MindMapWorkspace" }] },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MindMapWorkspace"] }]
+}

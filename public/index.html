@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f5f5">
+  <meta name="description" content="Веб-редактор ментальных карт с подключением по MCP">
+  <title>MindMap Studio</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Карты">
+      <div class="brand">
+        <span class="brand-icon" data-icon="brand"></span>
+        <div><strong>MindMap</strong><span>STUDIO</span></div>
+      </div>
+
+      <div class="collection">
+        <div class="rail-caption"><span>РАБОЧЕЕ ПРОСТРАНСТВО</span><span id="map-count" class="count">0</span></div>
+        <button class="button create-button" id="create"><span data-icon="plus"></span>Новая карта</button>
+        <div class="rail-caption maps-caption">МОИ КАРТЫ</div>
+        <div id="maps" class="map-list"></div>
+      </div>
+
+      <div class="rail-bottom">
+        <button class="mcp-card" id="mcp-info">
+          <span class="mcp-icon" data-icon="plug"></span>
+          <span><strong>MCP-интеграция</strong><small>Подключить ИИ-клиент</small></span>
+          <span class="mcp-arrow" data-icon="external"></span>
+        </button>
+        <button class="account" id="account">
+          <span class="avatar" data-icon="user"></span>
+          <span><strong id="account-name">Гость</strong><small id="account-label">Войти по ключу</small></span>
+          <span id="account-action" data-icon="login"></span>
+        </button>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <button class="icon-button mobile-maps" id="toggle-maps" aria-label="Список карт" data-icon="panel"></button>
+          <span class="breadcrumb-label">Карты</span><span class="breadcrumb-chevron" data-icon="chevron"></span>
+          <h1 id="map-title">Запуск продукта</h1>
+        </div>
+        <div class="header-actions">
+          <span id="sync" class="sync" role="status" aria-live="polite"><span></span>Пример карты</span>
+          <button class="button secondary" id="import" aria-label="Импорт карты" title="Импорт карты из JSON"><span data-icon="upload"></span><span class="action-text">Импорт</span></button>
+          <button class="button secondary" id="export"><span data-icon="download"></span><span class="action-text">Экспорт</span></button>
+          <button class="button secondary" id="view-mode" aria-pressed="false"><span data-icon="eye"></span><span class="action-text">Просмотр</span></button>
+          <button class="button secondary" id="node-style" aria-label="Текстовый вид" aria-pressed="false" title="Текстовый вид"><span data-icon="text"></span><span class="action-text">Текст</span></button>
+          <button class="button secondary" id="layout-mode" aria-label="Свободное размещение" aria-pressed="false" title="Включить свободное размещение" hidden><span data-icon="move"></span><span class="action-text">Свободно</span></button>
+          <button class="button primary" id="add" hidden><span data-icon="plus"></span><span class="action-text">Добавить узел</span></button>
+          <button class="icon-button" id="theme" aria-label="Тёмная тема" title="Тёмная тема" aria-pressed="false" data-icon="moon"></button>
+          <button class="icon-button mobile-inspector" id="toggle-inspector" aria-label="Свойства узла" data-icon="sliders"></button>
+        </div>
+      </header>
+
+      <div class="work-area">
+        <section class="canvas" id="canvas" aria-label="Холст ментальной карты" tabindex="0">
+          <div class="canvas-info">
+            <div class="canvas-label"><span data-icon="map"></span> ХОЛСТ КАРТЫ</div>
+            <div class="canvas-meta" id="map-meta"></div>
+          </div>
+          <div class="map-stage" id="stage">
+            <svg class="connections" aria-hidden="true">
+              <defs>
+                <marker id="connection-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto" markerUnits="userSpaceOnUse">
+                  <path d="M1 1 7 4 1 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </marker>
+              </defs>
+              <g id="connections"></g>
+            </svg>
+            <div id="nodes"></div>
+          </div>
+          <div class="canvas-empty" id="empty" hidden>
+            <span data-icon="map"></span>
+            <h2>Здесь начнётся ваша карта</h2>
+            <p>Создайте центральную тему и добавьте к ней ветви.</p>
+            <button class="button primary" id="empty-create"><span data-icon="plus"></span>Новая карта</button>
+          </div>
+          <div class="history-bar" id="history-controls" role="group" aria-label="История изменений" hidden>
+            <button type="button" class="icon-button" id="undo" aria-label="Отменить" aria-keyshortcuts="Control+Z" title="Отменить (Ctrl+Z)" data-icon="undo" disabled></button>
+            <button type="button" class="icon-button" id="redo" aria-label="Вернуть" aria-keyshortcuts="Control+Y" title="Вернуть (Ctrl+Y)" data-icon="redo" disabled></button>
+          </div>
+          <div class="zoom-bar" role="group" aria-label="Навигация по холсту">
+            <button class="icon-button" id="zoom-out" aria-label="Уменьшить" title="Уменьшить" data-icon="minus"></button>
+            <button id="zoom-level" title="Сбросить масштаб" aria-label="Сбросить масштаб">100%</button>
+            <button class="icon-button" id="zoom-in" aria-label="Увеличить" title="Увеличить" data-icon="plus"></button>
+            <span class="toolbar-divider"></span>
+            <button class="icon-button" id="fit" aria-label="Показать всю карту" title="Показать всю карту" data-icon="fit"></button>
+            <span class="toolbar-divider"></span>
+            <button class="icon-button trackpad-toggle" id="trackpad" aria-label="Режим тачпада" aria-pressed="false" title="Режим тачпада">
+              <span data-icon="trackpad"></span><span class="trackpad-label">Тачпад</span>
+            </button>
+            <button class="icon-button" id="wheel-settings" aria-label="Чувствительность колёсика" title="Чувствительность колёсика" data-icon="sliders"></button>
+          </div>
+          <button class="canvas-help icon-button" id="help" aria-label="Управление холстом" title="Управление холстом" data-icon="help"></button>
+        </section>
+
+        <aside class="inspector" id="inspector" aria-label="Свойства узла">
+          <div class="inspector-resize" role="separator" aria-controls="inspector" aria-orientation="vertical" aria-label="Ширина панели редактирования" tabindex="0"></div>
+          <div class="inspector-header"><span data-icon="sliders"></span><h2>Свойства узла</h2><button class="icon-button close-inspector" id="close-inspector" aria-label="Закрыть свойства" data-icon="x"></button></div>
+          <div class="bulk-actions" id="root-actions" hidden>
+            <button class="button secondary" type="button" id="hide-all-nodes">Скрыть все узлы</button>
+            <button class="button secondary" type="button" id="show-all-nodes">Показать все узлы</button>
+          </div>
+          <div id="inspector-body"></div>
+          <div class="inspector-footer" id="inspector-footer"></div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <dialog id="dialog">
+    <form id="dialog-form">
+      <div class="dialog-header"><span id="dialog-icon" class="dialog-icon"></span><button type="button" id="dialog-close" class="icon-button" aria-label="Закрыть" data-icon="x"></button></div>
+      <h2 id="dialog-title"></h2>
+      <p id="dialog-description"></p>
+      <div id="dialog-fields"></div>
+      <p id="dialog-error" class="error" role="alert" hidden></p>
+      <div class="dialog-actions"><button id="dialog-cancel" type="button" class="button secondary">Отмена</button><button id="dialog-submit" class="button primary" type="submit">Продолжить</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

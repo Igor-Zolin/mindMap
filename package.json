@@ -1,0 +1,20 @@
+{
+  "name": "mind-map-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server/local.js",
+    "dev:cloudflare": "wrangler dev",
+    "check:cloudflare": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+    "deploy:cloudflare": "wrangler deploy"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "2.1.2",
+    "@modelcontextprotocol/server": "2.4.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": { "wrangler": "4.152.0" },
+  "overrides": { "undici": "7.30.1" }
+}

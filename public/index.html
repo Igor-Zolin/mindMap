@@ -104,12 +104,14 @@
         <aside class="inspector" id="inspector" aria-label="Свойства узла">
           <div class="inspector-resize" role="separator" aria-controls="inspector" aria-orientation="vertical" aria-label="Ширина панели редактирования" tabindex="0"></div>
           <div class="inspector-header"><span data-icon="sliders"></span><h2>Свойства узла</h2><button class="icon-button close-inspector" id="close-inspector" aria-label="Закрыть свойства" data-icon="x"></button></div>
-          <div class="bulk-actions" id="root-actions" hidden>
-            <button class="button secondary" type="button" id="hide-all-nodes">Скрыть все узлы</button>
-            <button class="button secondary" type="button" id="show-all-nodes">Показать все узлы</button>
+          <div class="inspector-scroll">
+            <div class="bulk-actions" id="root-actions" hidden>
+              <button class="button secondary" type="button" id="hide-all-nodes">Скрыть все узлы</button>
+              <button class="button secondary" type="button" id="show-all-nodes">Показать все узлы</button>
+            </div>
+            <div id="inspector-body"></div>
+            <div class="inspector-footer" id="inspector-footer"></div>
           </div>
-          <div id="inspector-body"></div>
-          <div class="inspector-footer" id="inspector-footer"></div>
         </aside>
       </div>
     </main>

@@ -40,7 +40,7 @@ button:disabled { cursor: default; opacity: .5; }
 [hidden] { display: none !important; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 [data-icon], .brand-icon, .mcp-icon, .avatar { display: inline-grid; place-items: center; flex-shrink: 0; }
-.shell { display: grid; grid-template-columns: 244px minmax(0, 1fr); height: 100dvh; min-height: 400px; }
+.shell { display: grid; grid-template-columns: 244px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100dvh; overflow: clip; }
 .sidebar { background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; z-index: 4; }
 .brand { display: flex; align-items: center; gap: 11px; padding: 22px 21px 25px; }
 .brand-icon { width: 39px; height: 39px; border-radius: 12px; color: #fff; background: var(--accent); box-shadow: 0 4px 10px #d48b4e40; }
@@ -172,7 +172,10 @@ h1 { font-size: 16px; letter-spacing: -.2px; overflow: hidden; white-space: nowr
 .inspector-header > span { color: var(--accent); }
 .inspector-header > span svg { width: 17px; height: 17px; }
 .inspector-header h2 { font-size: 13px; margin: 0; }
-#inspector-body { padding: 16px; overflow: auto; }
+.inspector > .inspector-header { flex: none; }
+.inspector-scroll { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: auto; overscroll-behavior-y: contain; }
+.inspector-scroll > * { flex: none; }
+#inspector-body { padding: 16px; }
 .node-type { display: inline-flex; gap: 5px; align-items: center; background: var(--tint); color: var(--accent); padding: 5px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; }
 .node-type svg { width: 13px; height: 13px; }
 .field { display: grid; gap: 6px; margin-top: 15px; color: #455249; font-size: 12px; font-weight: 650; }
@@ -218,7 +221,7 @@ h1 { font-size: 16px; letter-spacing: -.2px; overflow: hidden; white-space: nowr
 .inspector-empty { font-size: 13px; color: var(--muted); margin-top: 0; }
 .details-panel { position: relative; z-index: 2; display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--line); background: var(--surface); }
 .details-close { margin-left: auto; }
-.details-body { min-height: 0; padding: 16px; overflow: auto; }
+.details-body { min-height: 0; padding: 16px; overflow: auto; overscroll-behavior-y: contain; }
 .details-title { margin: 0 0 12px; font-size: 17px; line-height: 1.35; overflow-wrap: anywhere; }
 .details-notes { margin: 0; color: var(--light-text); font-size: 14px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
 .notes-preview-toggle { margin-top: 8px; }

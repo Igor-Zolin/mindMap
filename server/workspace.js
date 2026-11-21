@@ -14,7 +14,7 @@ const layout = z.enum(['auto', 'free']);
 const offset = z.number().min(-maxBranchOffset).max(maxBranchOffset);
 const coordinates = { x: offset, y: offset };
 const position = z.object(coordinates).optional();
-const branch = z.object({ id, parentId: id.default('root'), title, notes: notes.default(''), color: color.optional(), side, position });
+const branch = z.object({ id, parentId: id.default('root'), title, notes: notes.default(''), color: color.optional(), side, position, linkedMapId: id.optional() });
 const patch = { title: title.optional(), notes: notes.optional(), color: color.optional() };
 const restoreInput = z.object({ ...mutable, layout: layout.optional(), nodes: z.array(z.unknown()).min(1).max(160) });
 
@@ -24,7 +24,7 @@ export const tools = {
   create_map: {
     description: 'Create a mind map. To create a complete tree in one call, pass branches with unique IDs and parent IDs. Use root as the parent for top-level branches.',
     input: z.object({
-      title, notes: notes.default(''), color: color.default('violet'), branches: z.array(branch).max(159).default([]), layout: layout.optional()
+      title, notes: notes.default(''), color: color.default('violet'), linkedMapId: id.optional(), branches: z.array(branch).max(159).default([]), layout: layout.optional()
     })
   },
   add_node: {
@@ -34,6 +34,14 @@ export const tools = {
   update_node: {
     description: 'Change a node title, notes or color. Renaming root also renames the map.',
     input: z.object({ ...mutable, ...nodeId, ...patch })
+  },
+  create_linked_map: {
+    description: 'Create a map from a node and link the node to it atomically. The new root inherits its title (unless overridden), notes and color. Returns sourceMap and createdMap.',
+    input: z.object({ ...mutable, ...nodeId, title: title.optional() })
+  },
+  set_node_link: {
+    description: 'Link a node to another map in this workspace. Pass null as linkedMapId to remove the link.',
+    input: z.object({ ...mutable, ...nodeId, linkedMapId: id.nullable() })
   },
   set_node_colors: {
     description: 'Set one palette color for all specified nodes atomically. Only the specified nodes change, including root when selected.',

@@ -127,6 +127,9 @@ h1 { font-size: 16px; letter-spacing: -.2px; overflow: hidden; white-space: nowr
 .node-title-measure { position: absolute; visibility: hidden; width: max-content; white-space: pre; pointer-events: none; }
 .node-note { color: var(--branch); flex: none; margin-left: auto; }
 .node-note svg { width: 13px; height: 13px; }
+.node-link { display: inline-grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; }
+.node-link svg { width: 16px; height: 16px; }
+.node-link:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
 .node.root .node-note { color: #f2cca1; margin-left: 0; }
 .node-add-control { position: absolute; z-index: 1; display: grid; place-items: center; transform: translate(-50%, -50%); padding: 0; border: 1px solid currentColor; border-radius: 50%; background: var(--surface); color: var(--branch); box-shadow: 0 1px 4px #24322621; }
 .node-add-control:hover { background: var(--branch-bg); }
@@ -213,6 +216,9 @@ h1 { font-size: 16px; letter-spacing: -.2px; overflow: hidden; white-space: nowr
 .bulk-actions { display: grid; gap: 8px; margin-bottom: 16px; }
 #root-actions { padding: 16px 16px 0; margin-bottom: 0; }
 .inspector-actions .primary { flex: 1; }
+.map-link-actions { display: grid; gap: 6px; margin-top: 16px; }
+.map-link-actions .button, .details-body .button { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+.details-body .button { margin-bottom: 12px; max-width: 100%; }
 .danger { color: #ac3558; background: #fff; border-color: #f2dce3; }
 .danger:hover { background: #fff2f6; }
 .inspector-footer { border-top: 1px solid var(--line); margin-top: auto; padding: 13px 16px; }

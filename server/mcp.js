@@ -5,7 +5,7 @@ export const maxBodySize = 1024 * 1024;
 
 export function createMcp(workspace) {
   return createMcpHandler(() => {
-    const server = new McpServer({ name: 'mind-map-studio', version: '0.1.0' });
+    const server = new McpServer({ name: 'mind-map-studio', version: '1.3.0' });
     for (const [name, tool] of Object.entries(tools)) {
       server.registerTool(name, {
         description: tool.description,

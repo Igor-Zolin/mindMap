@@ -77,6 +77,10 @@ export function mapCreationFromExport(document) {
     if (typeof notes !== 'string' || notes.length > 2000) throw new AppError('Заметки узла должны содержать до 2000 символов');
     if (node.color !== undefined && !nodeColors.includes(node.color)) throw new AppError('В файле есть неизвестный цвет узла');
     const normalized = { id: node.id, parentId: node.parentId, title: normalizeTitle(node.title), notes, color: node.color };
+    if (node.linkedMapId !== undefined) {
+      if (typeof node.linkedMapId !== 'string' || !idPattern.test(node.linkedMapId)) throw new AppError('Некорректная ссылка на карту');
+      normalized.linkedMapId = node.linkedMapId;
+    }
     if (node.side !== undefined) normalized.side = node.side;
     if (node.id !== 'root' && node.position !== undefined) normalized.position = branchPosition(node.position);
     return normalized;
@@ -85,7 +89,7 @@ export function mapCreationFromExport(document) {
   if (!root) throw new AppError('В карте отсутствует центральный узел');
   const branches = normalized.filter(node => node !== root);
   checkTree({ nodes: [root, ...branches] });
-  return { title: root.title, notes: root.notes, color: root.color, branches, layout: layoutMode(document.layout) };
+  return { title: root.title, notes: root.notes, color: root.color, linkedMapId: root.linkedMapId, branches, layout: layoutMode(document.layout) };
 }
 
 const findNode = (map, id) => {
@@ -117,13 +121,45 @@ function checkTree(map) {
   }
 }
 
-function treeNodes({ title, notes, color, branches }) {
+function treeNodes({ title, notes, color, linkedMapId, branches }) {
   const root = { id: 'root', parentId: null, title, notes: notes ?? '', color: color ?? palette[0] };
+  if (linkedMapId !== undefined) root.linkedMapId = linkedMapId;
   return [root, ...(branches ?? []).map((branch, index) => {
     const node = { ...branch, color: branch.color || palette[1 + index % (palette.length - 1)] };
     if (node.position !== undefined) node.position = branchPosition(node.position);
     return node;
   })];
+}
+
+function removeMissingLinks(map, maps) {
+  const targets = new Set(maps.filter(item => item.id !== map.id).map(item => item.id));
+  let changed = false;
+  for (const node of map.nodes) {
+    if (node.linkedMapId !== undefined && !targets.has(node.linkedMapId)) {
+      delete node.linkedMapId;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function createMap(maps, args) {
+  if (maps.length >= 50) throw new AppError('В пространстве может быть до 50 карт');
+  const title = normalizeTitle(args.title);
+  const map = {
+    id: crypto.randomUUID(), title, revision: 1, updatedAt: new Date().toISOString(),
+    nodes: treeNodes({ ...args, title })
+  };
+  if (layoutMode(args.layout) === 'free') map.layout = 'free';
+  checkTree(map);
+  removeMissingLinks(map, maps);
+  maps.push(map);
+  return map;
+}
+
+function markUpdated(map) {
+  map.revision++;
+  map.updatedAt = new Date().toISOString();
 }
 
 export function movedBranchNodes(nodes, { nodeId, parentId, side, position }) {
@@ -167,15 +203,8 @@ export class MapWorkspace {
     }
 
     if (action === 'create_map') {
-      if (maps.length >= 50) throw new AppError('В пространстве может быть до 50 карт');
-      const title = normalizeTitle(args.title);
-      const map = {
-        id: crypto.randomUUID(), title, revision: 1, updatedAt: new Date().toISOString(),
-        nodes: treeNodes({ ...args, title })
-      };
-      if (layoutMode(args.layout) === 'free') map.layout = 'free';
-      checkTree(map);
-      await this.#save([...maps, map]);
+      const map = createMap(maps, args);
+      await this.#save(maps);
       return map;
     }
 
@@ -186,20 +215,36 @@ export class MapWorkspace {
     if (map.revision !== args.expectedRevision) throw new AppError('Карта уже изменилась. Обновите её и повторите действие.', 409);
     if (action === 'delete_map') {
       maps.splice(index, 1);
+      for (const remaining of maps) {
+        if (removeMissingLinks(remaining, maps)) markUpdated(remaining);
+      }
       await this.#save(maps);
       return { deleted: map.id };
     }
 
-    if (action === 'move_node') map.nodes = movedBranchNodes(map.nodes, args);
+    let createdMap;
+    if (action === 'create_linked_map') {
+      const node = findNode(map, args.nodeId);
+      createdMap = createMap(maps, { title: args.title ?? node.title, notes: node.notes, color: node.color });
+      node.linkedMapId = createdMap.id;
+    } else if (action === 'set_node_link') {
+      const node = findNode(map, args.nodeId);
+      if (args.linkedMapId === null) delete node.linkedMapId;
+      else {
+        if (args.linkedMapId === map.id) throw new AppError('Выберите другую карту');
+        if (!maps.some(target => target.id === args.linkedMapId)) throw new AppError('Связанная карта не найдена', 404);
+        node.linkedMapId = args.linkedMapId;
+      }
+    } else if (action === 'move_node') map.nodes = movedBranchNodes(map.nodes, args);
     else {
       this.#edit(map, action, args);
+      if (action === 'restore_map') removeMissingLinks(map, maps);
       checkTree(map);
     }
     map.title = map.nodes[0].title;
-    map.revision++;
-    map.updatedAt = new Date().toISOString();
+    markUpdated(map);
     await this.#save(maps);
-    return map;
+    return createdMap ? { sourceMap: map, createdMap } : map;
   }
 
   #edit(map, action, args) {

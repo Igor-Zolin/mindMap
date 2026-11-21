@@ -44,11 +44,14 @@ let sequence = 0;
 let toastTimer;
 let dialogAction;
 const view = new MapView($('canvas'), {
-  onSelect: selectNode, onAdd: startAdd, onMarquee: selectNodes, onRename: renameNode,
+  onSelect: selectNode, onOpenLink: openMap, onAdd: startAdd, onMarquee: selectNodes, onRename: renameNode,
   onBranchStart: id => selectNodes([id]), onBranchDrop: moveBranch, onCollapse: toggleCollapse
 });
 const workArea = document.querySelector('.work-area');
 const details = mountDetailsPanel(workArea);
+const detailsLink = button('Открыть карту', 'secondary', 'external');
+detailsLink.hidden = true;
+workArea.querySelector('.details-title').after(detailsLink);
 applyIcons();
 
 const guestKey = 'mindmap.guest-maps.v1';
@@ -160,6 +163,24 @@ function renderRail() {
   $('account-action').innerHTML = icon(identity ? 'logout' : 'login');
 }
 
+function updateLinkControls() {
+  const node = map?.nodes.find(item => item.id === selection[0]);
+  const target = maps.find(item => item.id === node?.linkedMapId);
+  for (const control of [detailsLink, $('open-linked-map')]) {
+    if (!control) continue;
+    control.hidden = !target;
+    if (target) {
+      control.lastChild.textContent = 'Открыть «' + target.title + '»';
+      control.onclick = () => openMap(target.id);
+    }
+  }
+  const choose = $('choose-linked-map');
+  if (choose) {
+    choose.lastChild.textContent = node?.linkedMapId ? 'Изменить ссылку' : 'Связать с картой';
+    choose.disabled = maps.length < 2 && !node?.linkedMapId;
+  }
+}
+
 function render({ fit = false, preserveDraft = false } = {}) {
   const displayed = displayMap();
   const collapsed = collapsedMaps.get(displayed?.id) ?? new Set();
@@ -202,6 +223,7 @@ function render({ fit = false, preserveDraft = false } = {}) {
   }
   if (!preserveDraft || draft?.nodeId !== selection[0]) renderInspector();
   else updateRootActions();
+  updateLinkControls();
   updateHistoryButtons();
   updateSync();
 }
@@ -376,6 +398,14 @@ function renderInspector() {
   const dirty = () => Object.keys(values()).length > 0;
   const currentDraft = { nodeId: node.id, revision: displayed.revision, dirty, flush: saveChanges };
   draft = currentDraft;
+  const links = element('div', 'map-link-actions');
+  const open = button('Открыть карту', 'secondary', 'external');
+  open.id = 'open-linked-map';
+  const choose = button('Связать с картой', 'secondary', 'plug', showMapLink);
+  choose.id = 'choose-linked-map';
+  links.append(open, choose, button('Создать карту из узла', 'secondary', 'plus', showLinkedCreate));
+  body.append(links);
+  updateLinkControls();
   if (!root) {
     const actions = element('div', 'inspector-actions');
     actions.append(button('Переместить', 'secondary', null, showMove));
@@ -424,6 +454,7 @@ function selectNode(id, additive) {
     if (!node) return;
     selection = [id];
     view.select(selection);
+    updateLinkControls();
     details.show(node.title, node.notes, view.buttons.get(id));
     return;
   }
@@ -629,6 +660,8 @@ async function openMap(id) {
     await perform(async () => {
       map = await runMapAction('get_map', { mapId: id });
       selection = ['root'];
+      details.hide();
+      $('inspector').classList.remove('open');
       render({ fit: true });
     });
   } catch (error) { toast(error.message); }
@@ -735,6 +768,38 @@ function showCreate() {
     title: 'Новая карта', description: 'Название станет центральным узлом карты.', glyph: 'map',
     fields: [field('Название карты', input), example], submit: 'Создать',
     action: () => createMap({ title: input.value })
+  });
+}
+
+function showLinkedCreate() {
+  if (!allowLeaving()) return;
+  const node = map.nodes.find(item => item.id === selection[0]);
+  const revision = map.revision;
+  const input = titleInput('Название новой карты');
+  input.value = node.title;
+  showDialog({
+    title: 'Создать карту из узла', glyph: 'map',
+    description: 'Заметки и цвет узла перейдут в центр новой карты. ' +
+      (node.linkedMapId ? 'Новая ссылка заменит текущую.' : 'На узле появится ссылка для перехода.'),
+    fields: [field('Название карты', input)], submit: 'Создать и открыть',
+    action: () => mutate('create_linked_map', { nodeId: node.id, title: input.value }, revision, true)
+  });
+}
+
+function showMapLink() {
+  if (!allowLeaving()) return;
+  const node = map.nodes.find(item => item.id === selection[0]);
+  const revision = map.revision;
+  const select = element('select');
+  for (const target of maps.filter(item => item.id !== map.id)) {
+    select.add(new Option(target.title, target.id, false, target.id === node.linkedMapId));
+  }
+  if (node.linkedMapId) select.add(new Option('Убрать ссылку', ''));
+  showDialog({
+    title: 'Ссылка на карту', glyph: 'plug', description: 'Выберите, какую карту открывать из узла «' + node.title + '».',
+    fields: [field('Карта', select)], submit: 'Сохранить',
+    action: () => select.value === node.linkedMapId ||
+      mutate('set_node_link', { nodeId: node.id, linkedMapId: select.value || null }, revision, true)
   });
 }
 
@@ -858,7 +923,7 @@ async function mutate(action, fields, revision, inDialog = false, preserveDraft 
             const previousIds = new Set(map.nodes.map(node => node.id));
             selection = [result.nodes.find(node => !previousIds.has(node.id)).id];
           }
-          map = result;
+          map = result.sourceMap ?? result;
           if (action === 'add_node' || action === 'move_node') {
             const collapsed = collapsedMaps.get(id);
             if (collapsed?.size) {
@@ -870,8 +935,14 @@ async function mutate(action, fields, revision, inDialog = false, preserveDraft 
           }
           remember(map);
           recordHistory(history, previous);
+          if (action === 'create_linked_map') {
+            map = result.createdMap;
+            remember(map);
+            selection = ['root'];
+            $('inspector').classList.remove('open');
+          }
         }
-        render({ fit: action === 'delete_map' || action === 'set_layout', preserveDraft });
+        render({ fit: action === 'delete_map' || action === 'set_layout' || action === 'create_linked_map', preserveDraft });
         if (action === 'add_node' || (action === 'move_node' && !fields.position)) view.reveal(selection[0]);
         return true;
       } catch (error) {
@@ -912,6 +983,7 @@ async function sync() {
       render({ fit: !sameMap || !list.length, preserveDraft: sameMap && draft?.dirty() });
     } else if (changedList) {
       renderRail();
+      updateLinkControls();
     }
     if (!draft?.dirty()) updateSync();
   } catch (error) {

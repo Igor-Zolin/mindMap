@@ -248,6 +248,12 @@ function mapNodeButton(node) {
   button.title = node.title;
   setColor(button, node.color);
   button.append(element('span', 'node-dot'), element('span', 'node-text', node.title));
+  if (node.linkedMapId) {
+    const link = element('span', 'node-link');
+    link.title = 'Открыть связанную карту';
+    link.innerHTML = icon('external');
+    button.append(link);
+  }
   if (node.notes) {
     const note = element('span', 'node-note');
     note.innerHTML = icon('note');
@@ -518,7 +524,7 @@ export class MapView {
   layoutPositions = [];
   selection = [];
 
-  constructor(canvas, { onSelect, onAdd, onMarquee, onRename, onBranchStart, onBranchDrop, onCollapse }) {
+  constructor(canvas, { onSelect, onOpenLink, onAdd, onMarquee, onRename, onBranchStart, onBranchDrop, onCollapse }) {
     this.canvas = canvas;
     this.stage = canvas.querySelector('#stage');
     this.connections = canvas.querySelector('#connections');
@@ -537,6 +543,7 @@ export class MapView {
     this.controls = element('div', 'node-controls');
     this.level = canvas.querySelector('#zoom-level');
     this.onSelect = onSelect;
+    this.onOpenLink = onOpenLink;
     this.onAdd = onAdd;
     this.onRename = onRename;
     this.onCollapse = onCollapse;
@@ -635,7 +642,7 @@ export class MapView {
     canvas.addEventListener('auxclick', event => { if (event.button === 1) event.preventDefault(); });
 
     canvas.addEventListener('pointerdown', event => {
-      if (drag || !this.positions.length || event.target.closest('input, textarea')) return;
+      if (drag || !this.positions.length || event.target.closest('input, textarea, .node-link')) return;
       const interactive = event.target.closest('button');
       const primary = event.button === 0;
       const pan = event.button === 1 || (primary && (space || (!interactive && (event.pointerType === 'touch' || !this.editable))));
@@ -808,7 +815,10 @@ export class MapView {
     this.mapNodes = map?.nodes ?? [];
     for (const node of this.mapNodes) {
       const button = mapNodeButton(node);
-      button.onclick = event => this.onSelect(node.id, event.shiftKey);
+      button.onclick = event => {
+        if (event.target.closest('.node-link') && !event.shiftKey) this.onOpenLink(node.linkedMapId);
+        else this.onSelect(node.id, event.shiftKey);
+      };
       if (editable) {
         button.ondblclick = () => this.onRename(node.id);
         button.onkeydown = event => {
@@ -1347,6 +1357,7 @@ export class MapView {
     stage.append(layer);
     for (const node of this.mapNodes) {
       const copy = file.importNode(this.buttons.get(node.id), true);
+      copy.querySelector('.node-link')?.remove();
       copy.classList.remove('selected', 'renaming', 'drag-source', 'drop-target');
       copy.removeAttribute('aria-pressed');
       copy.dataset.parentId = node.parentId ?? '';
